@@ -46,6 +46,10 @@ func main() {
 	dg.Close()
 }
 
+type Response struct {
+	global Global
+}
+
 type Global struct {
 	name                string
 	uid                 uint32
@@ -138,10 +142,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				log.Fatal(err)
 			}
 
-			var global Global
-			json.Unmarshal([]byte(string(body)), &global)
+			var response Response
+			json.Unmarshal([]byte(string(body)), &response)
 
-			fmt.Println("Name: %s", "Rank: %s", global.name, global.rank.RankScore)
+			fmt.Println("Name: %s", "Rank: %s", response.global.name, response.global.rank.RankScore)
 
 			// s.ChannelMessageSend(m.ChannelID, string(body))
 
