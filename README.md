@@ -9,4 +9,9 @@ Copy the .env example file
 ## Linux
     cp .env.example .env
 
-Change the value of `API_KEY` to use your API key from [tracker.gg](https://tracker.gg/developers/apps)
+Change the value of `API_KEY` to use your API key from [here](https://www.apexlegendsapi.com/documentation.php)
+
+# Running
+This will be updated later to store user names but for now we pass in who we want to look up as a command line argument.
+
+    go run main.go playername
