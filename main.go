@@ -93,6 +93,8 @@ func getCharacterInfo(characterInfo string) map[string]string {
 	character["RankScore"] = gjson.Get(characterInfo, "global.rank.rankScore").String()
 	character["rankName"] =gjson.Get(characterInfo, "global.rank.rankName").String()
 	character["rankDiv"] = gjson.Get(characterInfo, "global.rank.rankDiv").String()
+
+	// TODO: We need to look into downloading this file so we can manipulate it and send it back as part of the embedded response.
 	character["rankImage"] = gjson.Get(characterInfo, "global.rank.rankImg").String()
 
 	return character
