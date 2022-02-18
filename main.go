@@ -59,30 +59,60 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	command := strings.Fields(m.Content)
 
-	if command[0] == "!apexname" {
+	switch command[0]{
+		case "!apexname":
+			// Lots more error handling can be done to stop abuse. But be sensible for now yeah?
+			if len(command) == 1 {
+				s.ChannelMessageSend(m.ChannelID, "No name included")
+			} else {
+				api_key := os.Getenv("API_KEY")
+				resp, err := http.Get("https://api.mozambiquehe.re/bridge?version=5&platform=PC&player=" + command[1] + "&auth=" + api_key)
+				if err != nil {
+					log.Fatal(err)
+				}
 
-		// Lots more error handling can be done to stop abuse. But be sensible for now yeah?
-		if len(command) == 1 {
-			s.ChannelMessageSend(m.ChannelID, "No name included")
-		} else {
-			api_key := os.Getenv("API_KEY")
-			resp, err := http.Get("https://api.mozambiquehe.re/bridge?version=5&platform=PC&player=" + command[1] + "&auth=" + api_key)
-			if err != nil {
-				log.Fatal(err)
+				defer resp.Body.Close()
+
+				body, err := ioutil.ReadAll(resp.Body)
+
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				character := getCharacterInfo(string(body))
+
+				s.ChannelMessageSendEmbed(m.ChannelID, embed.NewGenericEmbed(character["Name"], "RP Score: " + character["RankScore"] + ", Current Rank: " + character["rankName"] + " " + character["rankDiv"]))
 			}
-
-			defer resp.Body.Close()
-
-			body, err := ioutil.ReadAll(resp.Body)
-
-			if err != nil {
-				log.Fatal(err)
+		case "!apexhistory":
+			// Lots more error handling can be done to stop abuse. But be sensible for now yeah?
+			//Copied from above, we can refactor this
+			if len(command) == 1 {
+				s.ChannelMessageSend(m.ChannelID, "No name included")
 			}
+			else{
+				uid, err := fetchUserID(command[1], api_key)
+				if err != nil {
+					log.Fatal(err)
+					return 
+				}
 
-			character := getCharacterInfo(string(body))
+				mode := "BATTLE_ROYALE" //Default mode to BR, do we care about others?... 
+				limit := 1 //Defaulting to 1 as will need to work out how to loop through multiple entries. Could pass this in if wanted
 
-			s.ChannelMessageSendEmbed(m.ChannelID, embed.NewGenericEmbed(character["Name"], "RP Score: " + character["RankScore"] + ", Current Rank: " + character["rankName"] + " " + character["rankDiv"]))
-		}
+				resp, err := http.Get("https://api.mozambiquehe.re/games?auth=" + api_key + "&uid=" + uid + "&mode=" + mode + "&limit=" + limit)
+
+				body, err := ioutil.ReadAll(resp.Body)
+
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				history := getHistoryInfo(string(body))
+
+				s.ChannelMessageSendEmbed(m.ChannelID, embed.NewGenericEmbed(history["Name"], "Mode: " + history["GameMode"] + " Kills: " + [history["Kills"]] + " DamageDone: " + history["Damage"] + " Legend: " + history["Legend"]  + " RPChange: " + history["RPChange"])
+			
+				//TODO: Needs testing
+			}
 	}
 }
 
@@ -98,4 +128,41 @@ func getCharacterInfo(characterInfo string) map[string]string {
 	character["rankImage"] = gjson.Get(characterInfo, "global.rank.rankImg").String()
 
 	return character
+}
+
+
+func getHistoryInfo(historyInfo string, ) map[string]string {
+	history := make(map[string]string)
+
+	history["Name"] = gjson.Get(historyInfo, "name").String()
+	history["Legend"] = gjson.Get(historyInfo, "lengendPlayed").String()
+	history["GameMode"] =gjson.Get(historyInfo, "gameMode").String()
+	history["Kills"] = gjson.Get(historyInfo, "gameData.kills.value").String()
+	history["Damage"] = gjson.Get(historyInfo, "gameData.damage.value").String()
+	//Can't get assists, knocks? :(
+	history["RPChange"] = gjson.Get(historyInfo, "BRScoreChange").String()
+
+	return history
+
+	//TODO: This may need to loop through multiple json entries if we want to show multiple
+}
+
+
+//Assuming this would return a string, could be wrong...
+func fetchUserID(username string, apikey string) string {
+	resp, err := http.Get("https://api.mozambiquehe.re/nametouid?player= " + username + " &platform=PC&auth=" + apikey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	      
+	return body.String()
+	// TODO: Needs testing
 }
