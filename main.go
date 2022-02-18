@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/tidwall/gjson"
 	"github.com/bwmarrin/discordgo"
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -46,68 +46,6 @@ func main() {
 	dg.Close()
 }
 
-type Response struct {
-	global Global
-}
-
-type Global struct {
-	name                string
-	uid                 uint32
-	avatar              string
-	platform            string
-	level               uint32
-	toNextLevelPercent  uint32
-	internalUpdateCount uint32
-	bans                Bans
-	rank                Rank
-	battlepass          Battlepass
-	badges              string
-}
-
-type Bans struct {
-	isActive         bool
-	remainingSeconds uint32
-	last_banReason   string
-}
-
-type Rank struct {
-	RankScore         uint32
-	RankName          string
-	RankDiv           int32
-	ladderPosPlatform int32
-	rankImg           string
-	rankedSeason      string
-}
-
-type Arena struct {
-	rankScore         uint32
-	rankName          string
-	rankDiv           uint32
-	ladderPosPlatform int32
-	rankImg           string
-	rankedSeason      string
-}
-
-type Battlepass struct {
-	level   string
-	history History
-}
-
-type History struct {
-	season1  int32
-	season2  int32
-	season3  int32
-	season4  int32
-	season5  int32
-	season6  int32
-	season7  int32
-	season8  int32
-	season9  int32
-	season10 int32
-	season11 int32
-	season12 int32
-}
-
 // This function will be called (due to AddHandler above) every time a new
 // message is created on any channel that the authenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -119,8 +57,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	command := strings.Fields(m.Content)
-
-	fmt.Println(command[0])
 
 	if command[0] == "!apexname" {
 
@@ -142,14 +78,21 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				log.Fatal(err)
 			}
 
-			var response Response
-			json.Unmarshal([]byte(string(body)), &response)
+			character := make(map[string]string)
+			
+			characterName := gjson.Get(string(body), "global.name")
+			character["Name"] = characterName.String()
 
-			fmt.Println("Name: %s", "Rank: %s", response.global.name, response.global.rank.RankScore)
+			characterRankScore := gjson.Get(string(body), "global.rank.rankScore")
+			character["RankScore"] = characterRankScore.String()
 
-			// s.ChannelMessageSend(m.ChannelID, string(body))
+			characterRankName := gjson.Get(string(body), "global.rank.rankName")
+			character["rankName"] = characterRankName.String()
 
-			// fmt.Println(string(body))
+			characterRankDiv := gjson.Get(string(body), "global.rank.rankDiv")
+			character["rankDiv"] = characterRankDiv.String()
+
+			s.ChannelMessageSend(m.ChannelID, "Name: " + character["Name"] + ", RP Score: " + character["RankScore"] + ", Current Rank: " + character["rankName"] + " " + character["rankDiv"])
 		}
 	}
 }
