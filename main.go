@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Clinet/discordgo-embed"
 	"github.com/tidwall/gjson"
 	"github.com/bwmarrin/discordgo"
 	_ "github.com/joho/godotenv/autoload"
@@ -78,21 +79,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				log.Fatal(err)
 			}
 
-			character := make(map[string]string)
-			
-			characterName := gjson.Get(string(body), "global.name")
-			character["Name"] = characterName.String()
+			character := getCharacterInfo(string(body))
 
-			characterRankScore := gjson.Get(string(body), "global.rank.rankScore")
-			character["RankScore"] = characterRankScore.String()
-
-			characterRankName := gjson.Get(string(body), "global.rank.rankName")
-			character["rankName"] = characterRankName.String()
-
-			characterRankDiv := gjson.Get(string(body), "global.rank.rankDiv")
-			character["rankDiv"] = characterRankDiv.String()
-
-			s.ChannelMessageSend(m.ChannelID, "Name: " + character["Name"] + ", RP Score: " + character["RankScore"] + ", Current Rank: " + character["rankName"] + " " + character["rankDiv"])
+			s.ChannelMessageSendEmbed(m.ChannelID, embed.NewGenericEmbed(character["Name"], "RP Score: " + character["RankScore"] + ", Current Rank: " + character["rankName"] + " " + character["rankDiv"]))
 		}
 	}
+}
+
+func getCharacterInfo(characterInfo string) map[string]string {
+	character := make(map[string]string)
+
+	character["Name"] = gjson.Get(characterInfo, "global.name").String()
+	character["RankScore"] = gjson.Get(characterInfo, "global.rank.rankScore").String()
+	character["rankName"] =gjson.Get(characterInfo, "global.rank.rankName").String()
+	character["rankDiv"] = gjson.Get(characterInfo, "global.rank.rankDiv").String()
+
+	// TODO: We need to look into downloading this file so we can manipulate it and send it back as part of the embedded response.
+	character["rankImage"] = gjson.Get(characterInfo, "global.rank.rankImg").String()
+
+	return character
 }
